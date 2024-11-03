@@ -32,7 +32,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _fetchMyRides() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    DRIVERID = prefs.getString("DRIVERID") ?? ''; // Use DRIVERID if available
+    DRIVERID = prefs.getString("PID") ?? ''; // Use DRIVERID if available
     DRIVERPHONE = prefs.getString("DRIVERPHONE") ?? ''; 
     DRIVERFNAME = prefs.getString("DRIVERFNAME") ?? '';   
     DRIVERLNAME = prefs.getString("DRIVERLNAME") ?? ''; 
@@ -41,7 +41,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       isLoading = true;
     });
 
-    final url = "${BaseURL.REQUESTRIDES}";
+    final url = "${BaseURL.REQUESTRIDES}/$DRIVERID";
+   
     print('Request URL: $url');
 
     try {
@@ -67,7 +68,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _loadUserData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
-      DRIVERID = prefs.getString("DRIVERID") ?? ''; 
+      DRIVERID = prefs.getString("PID") ?? ''; 
       DRIVERPHONE = prefs.getString("DRIVERPHONE") ?? ''; 
       DRIVERFNAME = prefs.getString("DRIVERFNAME") ?? '';   
       DRIVERLNAME = prefs.getString("DRIVERLNAME") ?? ''; 
@@ -198,6 +199,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       print(response.statusCode);
       print(response.body);
       if (response.statusCode != 200) {
+           await   _fetchMyRides();
         // Handle failure
         _showErrorDialog("Failed to go online. Please try again.");
       }
@@ -224,6 +226,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       print(response.body);
       if (response.statusCode != 200) {
         // Handle failure
+           await   _fetchMyRides();
         _showErrorDialog("Failed to go offline. Please try again.");
       }
     } catch (e) {
@@ -291,6 +294,8 @@ class HomeScreen extends StatelessWidget {
                   columns: const <DataColumn>[
                     DataColumn(label: Text('From')),
                     DataColumn(label: Text('To')),
+                      DataColumn(label: Text('Customer')),
+                    DataColumn(label: Text('Phone')),
                     DataColumn(label: Text('Action')),
                   ],
                   rows: requestrides
@@ -298,7 +303,17 @@ class HomeScreen extends StatelessWidget {
                         (data) => DataRow(cells: [
                           DataCell(Text(data.from)),
                           DataCell(Text(data.to)),
-                          DataCell(Text(data.action)),
+                          DataCell(Text(data.customerfname + ' ' + data.customerlname)),
+                           DataCell(Text(data.customerphone)),
+                      
+                   
+                       DataCell( ElevatedButton( onPressed: () {  _acceptRide(data.id);   },
+                        style: ElevatedButton.styleFrom(
+                       primary: Colors.green, 
+                      ),    child: Text(      'Accept',      style: TextStyle(color: Colors.white),     ),
+                        ),
+                       ),
+
                         ]),
                       )
                       .toList(),
@@ -365,4 +380,43 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
+  
+ 
+
+   Future<void> _acceptRide(int id) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    
+    String driverId = prefs.getString("PID") ?? '';
+    String driverfname = prefs.getString("DRIVERFNAME") ?? '';
+    String driverlastname = prefs.getString("DRIVERLNAME") ?? '';
+      String  driverphoneNumber = prefs.getString("DRIVERPHONE") ?? ''; 
+    Map<String, dynamic> postData = {
+      "recordid": id,
+      "driverid": driverId,
+      "driverfirstname": driverfname,
+      "driverlastname": driverlastname,
+      "driverphone": driverphoneNumber
+      
+      };
+    String jsonString = json.encode(postData);
+    print('JSON Data Log: $jsonString');
+
+    try {
+      final response = await http.post(
+        Uri.parse(BaseURL.UPDATEDRIVERACCEPT),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonString,
+      );
+      print(response.statusCode);
+      print(response.body);
+      if (response.statusCode != 200) {
+        // Handle failure
+
+      }
+    } catch (e) {
+    
+    }
+  }
+  
+
 }

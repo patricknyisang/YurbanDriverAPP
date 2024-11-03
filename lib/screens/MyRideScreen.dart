@@ -1,8 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 import 'package:yurbandrivers/BaseURL.dart';
 import 'package:yurbandrivers/models/GetMyrideModel.dart';
 
@@ -15,10 +14,10 @@ class MyRideScreen extends StatefulWidget {
 }
 
 class MyRideScreenState extends State<MyRideScreen> {
-  String driverLName = '';
-  String driverFName = '';
-  String driverPhone = '';
-
+    String DRIVERFNAME = '';
+  String DRIVERLNAME = '';
+  String DRIVERPHONE = '';
+  String DRIVERID = '';
   bool isLoading = false;
   List<GetMyrideModel> myrides = [];
 
@@ -31,11 +30,14 @@ class MyRideScreenState extends State<MyRideScreen> {
 
   Future<void> _fetchMyRides() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-      driverPhone = prefs.getString("DRIVERPHONE") ?? ''; 
+   DRIVERID = prefs.getString("PID") ?? ''; 
+      DRIVERPHONE = prefs.getString("DRIVERPHONE") ?? ''; 
+      DRIVERFNAME = prefs.getString("DRIVERFNAME") ?? '';   
+      DRIVERLNAME = prefs.getString("DRIVERLNAME") ?? ''; 
     setState(() {
       isLoading = true;
     });
-    final url = "${BaseURL.GETMYRIDES}/$driverPhone";
+    final url = "${BaseURL.GETMYRIDES}/$DRIVERID";
     print('Request URL: $url');
     
     final response = await http.get(Uri.parse(url));
@@ -58,9 +60,10 @@ class MyRideScreenState extends State<MyRideScreen> {
   Future<void> _loadUserData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
-   driverPhone = prefs.getString("DRIVERPHONE") ?? ''; 
-      driverFName = prefs.getString("DRIVERFNAME") ?? '';   
-      driverLName = prefs.getString("DRIVERLNAME") ?? ''; 
+  DRIVERID = prefs.getString("PID") ?? ''; 
+      DRIVERPHONE = prefs.getString("DRIVERPHONE") ?? ''; 
+      DRIVERFNAME = prefs.getString("DRIVERFNAME") ?? '';   
+      DRIVERLNAME = prefs.getString("DRIVERLNAME") ?? ''; 
     });
   }
 
@@ -98,14 +101,37 @@ class MyRideScreenState extends State<MyRideScreen> {
                 columns: const <DataColumn>[
                   DataColumn(label: Text('From')),
                   DataColumn(label: Text('To')),
-                  DataColumn(label: Text('Action')),
+                    DataColumn(label: Text('Customer')),
+                      DataColumn(label: Text('Phone')),
+
+                  DataColumn(label: Text('Status')),
+                    DataColumn(label: Text('Action')),
+                  
                 ],
                 rows: myrides
                     .map(
                       (data) => DataRow(cells: [
                         DataCell(Text(data.from)),
                         DataCell(Text(data.to)),
+                         DataCell(Text(data.customerfname + ' ' + data.customerlname)),
+
+                        DataCell(Text(data.customerphone)),
                         DataCell(Text(data.action)),
+
+                          DataCell(  ElevatedButton(  onPressed: () {
+                         _RejectRide(data.id);
+                                              },
+                             style: ElevatedButton.styleFrom(
+                           primary: Colors.red, // Set the background color to red
+                             ),
+                          child: Text(
+                          'Reject',
+                         style: TextStyle(color: Colors.white), // Optional: Change text color to white
+                      ),
+                      ),
+                 ),
+
+                
                       ]),
                     )
                     .toList(),
@@ -113,4 +139,34 @@ class MyRideScreenState extends State<MyRideScreen> {
             ),
     );
   }
+  
+
+
+     Future<void> _RejectRide(int id) async {
+  
+    Map<String, dynamic> postData = {
+      "recordid": id,
+  
+      };
+    String jsonString = json.encode(postData);
+    print('JSON Data Log: $jsonString');
+
+    try {
+      final response = await http.post(
+        Uri.parse(BaseURL.UPDATEDRIVEREJECT),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonString,
+      );
+      print(response.statusCode);
+      print(response.body);
+      if (response.statusCode != 200) {
+        // Handle failure
+ await   _fetchMyRides();
+      }
+    } catch (e) {
+    
+    }
+  }
+  
+
 }
